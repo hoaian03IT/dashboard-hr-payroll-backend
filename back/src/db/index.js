@@ -10,7 +10,6 @@ async function connectToHRDB() {
         password: process.env.SQL_PASSWORD,
         database: process.env.SQL_DB,
         server: process.env.SQL_SERVER,
-        driver: "msnodesqlv8",
 
         options: {
             trustServerCertificate: true,
