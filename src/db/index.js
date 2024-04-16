@@ -1,4 +1,4 @@
-const s = require("mssql");
+require("mssql");
 const sql = require("mssql/msnodesqlv8");
 const mongoose = require("mongoose");
 const mysql = require("mysql2");
@@ -6,10 +6,10 @@ const mysql = require("mysql2");
 async function connectToHRDB() {
     let conn;
     const sqlConfig = {
-        user: process.env.SQL_USERNAME,
-        password: process.env.SQL_PASSWORD,
-        database: process.env.SQL_DB,
-        server: process.env.SQL_SERVER,
+        user: "sa",
+        password: "123",
+        database: "HRM",
+        server: "localhost",
         driver: "msnodesqlv8",
 
         options: {
@@ -18,6 +18,7 @@ async function connectToHRDB() {
     };
     try {
         conn = await new sql.ConnectionPool(sqlConfig).connect();
+        console.log("Connect to SQL Server successfully");
     } catch (error) {
         console.error("Connect to SQL Server failed - " + error);
     }
