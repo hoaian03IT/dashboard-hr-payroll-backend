@@ -15,9 +15,14 @@ async function connectToHRDB() {
         options: {
             trustServerCertificate: true,
         },
+        
     };
     try {
         conn = await new sql.ConnectionPool(sqlConfig).connect();
+        conn.request().query(`select * from BENEFIT_PLANS`, (a, b) => {
+            console.log(b);
+        })
+        console.log("Connect to SQL Server successfully")
     } catch (error) {
         console.error("Connect to SQL Server failed - " + error);
     }
@@ -54,8 +59,8 @@ async function connectToMongoDB() {
 
 async function connectDB(app) {
     await connectToMongoDB(app);
-    const sqlConn = await connectToHRDB();
     const mySqlConn = await connectToPayrollDB();
+    const sqlConn = await connectToHRDB();
     return { sqlConn, mySqlConn };
 }
 
