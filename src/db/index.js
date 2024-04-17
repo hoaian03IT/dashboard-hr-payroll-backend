@@ -6,10 +6,10 @@ const mysql = require("mysql2");
 async function connectToHRDB() {
     let conn;
     const sqlConfig = {
-        user: "sa",
-        password: "123",
-        database: "HRM",
-        server: "localhost",
+        user: process.env.SQL_USERNAME,
+        password: process.env.SQL_PASSWORD,
+        database: process.env.SQL_DB,
+        server: process.env.SQL_SERVER,
         driver: "msnodesqlv8",
 
         options: {
@@ -18,9 +18,6 @@ async function connectToHRDB() {
     };
     try {
         conn = await new sql.ConnectionPool(sqlConfig).connect();
-        conn.request().query(`select * from BENEFIT_PLANS`, (a, b) => {
-            console.log(b);
-        });
         console.log("Connect to SQL Server successfully");
     } catch (error) {
         console.error("Connect to SQL Server failed - " + error);
@@ -38,7 +35,7 @@ async function connectToPayrollDB() {
             password: process.env.MYSQL_PASSWORD,
             database: process.env.MYSQL_DB,
         };
-        conn = await mysql.createConnection(mysqlConfig);
+        conn = mysql.createConnection(mysqlConfig);
         console.log("Connect to MySQL successfully");
     } catch (error) {
         console.error("Connect to MySQL failed" + error.message);
