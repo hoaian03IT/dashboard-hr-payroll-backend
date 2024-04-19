@@ -20,8 +20,6 @@ const corsOption = {
 app.use(cors(corsOption));
 
 connectMongoDB();
-connectSQL();
-connectMySQL();
 
 router(app);
 
