@@ -1,7 +1,7 @@
 const express = require("express");
 const morgan = require("morgan");
 const dotenv = require("dotenv");
-const { connectSQL, connectMongoDB } = require("./src/db");
+const { connectMongoDB } = require("./src/db");
 const { router } = require("./src/router");
 
 dotenv.config();
