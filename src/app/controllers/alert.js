@@ -26,8 +26,15 @@ class Alert {
   async getVacationDate(req, res) {
     try {
       const conn = await connectMySQL();
-      const [results, fields] = await conn.query("select * from Employee");
+      const [results, fields] = await conn.query(
+        "SELECT  CONCAT(`First Name`, ' ', `Last Name`) AS FullName,idEmployee,`Vacation Days` AS FullName FROM Employee "
+      );
+      console.log(results, fields);
       return res.status(200).json({
+        fields: fields.map((field) => ({
+          name: field.name,
+          type: field.type,
+        })),
         data: results,
       });
     } catch (error) {
