@@ -1,108 +1,88 @@
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+
 const { generateRefreshToken, generateAccessToken } = require("../../utils/generateToken");
 const { userModel, refreshTokenModel } = require("../models");
-const bcrypt = require("bcrypt");
 
-const MAX_LENGTH_USERNAME = 256;
-const MIN_LENGTH_USERNAME = 0;
-const MAX_LENGTH_PW = 256;
-const MIN_LENGTH_PW = 0;
 const saltRounds = 10;
-class Auth {
-    async login(req, res) {
-        try {
-            const { username = "", password = "" } = req.body;
 
-            if (
-                username.includes(" ") ||
-                username.length === MIN_LENGTH_USERNAME ||
-                username.length > MAX_LENGTH_USERNAME
-            ) {
+function isValidUsername(username) {
+    /**
+     * The username must be between 3 and 16 characters long.
+     * The username can only contain alphanumeric characters (letters A-Z, numbers 0-9) and underscores.
+     */
+
+    // Define the regular expression for a valid username
+    const regex = /^[a-zA-Z0-9_]{4,16}$/;
+
+    // Test the username against the regular expression
+    return regex.test(username);
+}
+
+function isValidPassword(password) {
+    /**
+     * The password must be at least 8 characters long.
+     * The password must contain at least one uppercase letter.
+     * The password must contain at least one lowercase letter.
+     * The password must contain at least one digit.
+     * The password must contain at least one special character (e.g., !, @, #, $, %, ^, &, *).
+     */
+
+    // Define the regular expression for a valid username
+    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,256}$/;
+
+    // Test the username against the regular expression
+    return regex.test(password);
+}
+
+class Auth {
+    async register(req, res) {
+        try {
+            const {
+                username: usernamePayload = "",
+                password: passwordPayload = "",
+                fistName: fistNamePayload,
+                middleName: middleNamePayload,
+                lastName: lastNamePayload,
+                gender: genderPayload,
+                phoneNumber: phoneNumberPayload,
+                email: emailPayload,
+            } = req.body;
+
+            // check username's format
+            if (!isValidUsername(usernamePayload)) {
                 return res.status(403).json({
                     title: "Error",
                     message: "Invalid username",
                 });
             }
 
-            if (password.length === MIN_LENGTH_PW || password.length > MAX_LENGTH_PW)
+            // // check password's format
+            if (!isValidPassword(passwordPayload))
                 return res.status(403).json({
                     title: "Error",
                     message: "Invalid password",
                 });
 
-            let user = await userModel.findOne({ USERNAME: username });
-            if (!user) {
-                return res.status(403).json({
-                    title: "Error",
-                    message: "Username or password is not correct",
-                });
-            }
-
-            const isMatchPW = await bcrypt.compare(password, user.PASSWORD);
-            if (!isMatchPW) {
-                return res.status(403).json({
-                    title: "Error",
-                    message: "Username or password is not correct",
-                });
-            }
-
-            // create tokens
-            const refreshToken = generateRefreshToken({ USERNAME: user.USER_ID, PASSWORD: user.PASSWORD });
-            const accessToken = generateAccessToken({ USERNAME: user.USER_ID, PASSWORD: user.PASSWORD });
-
-            // update refresh token for new user
-            const newRefreshToken = new refreshTokenModel({ REFRESH_TOKEN_VALUE: refreshToken, USER_ID: user.USER_ID });
-            newRefreshToken.save();
-
-            // save refresh token as cookie
-            res.cookie("refresh-token", refreshToken, {
-                httpOnly: true,
-                secure: true,
-                path: "/",
-                sameSite: "strict",
-                expires: new Date(Date.now() + 30 * 24 * 3600000), // 30 days
-            });
-
-            const { USERNAME, PASSWORD, FIRST_NAME, MIDDLE_INITIAL, LAST_NAME, GENDER, PHONE_NUMBER, EMAIL } = user;
-            return res.status(200).json({
-                title: "Success",
-                user: { USERNAME, PASSWORD, FIRST_NAME, MIDDLE_INITIAL, LAST_NAME, GENDER, PHONE_NUMBER, EMAIL },
-                token: accessToken,
-            });
-        } catch (error) {
-            res.status(500).json({ title: "Error", message: error.message });
-        }
-    }
-    async register(req, res) {
-        try {
-            const {
-                username = "",
-                password = "",
-                fistName,
-                middleName,
-                lastName,
-                gender,
-                phoneNumber,
-                email,
-            } = req.body;
-
-            const hasExistEmail = await userModel.findOne({ USERNAME: username });
+            const hasExistEmail = await userModel.findOne({ username: usernamePayload });
             if (hasExistEmail) {
                 return res.status(403).json({
                     title: "Error",
                     message: "Email already exists",
                 });
             }
-            const hashPassword = await bcrypt.hash(password, saltRounds);
+
+            const hashPassword = await bcrypt.hash(passwordPayload, saltRounds);
 
             const newUser = new userModel({
-                USERNAME: username,
-                PASSWORD: hashPassword,
-                FIRST_NAME: fistName,
-                MIDDLE_INITIAL: middleName,
-                LAST_NAME: lastName,
-                GENDER: gender,
-                PHONE_NUMBER: phoneNumber,
-                EMAIL: email,
+                username: usernamePayload,
+                password: hashPassword,
+                first_name: fistNamePayload,
+                middle_initial: middleNamePayload,
+                last_name: lastNamePayload,
+                gender: genderPayload,
+                phone_number: phoneNumberPayload,
+                email: emailPayload,
             });
 
             await newUser.save();
@@ -115,6 +95,74 @@ class Auth {
             res.status(500).json({ title: "Error", message: error.message });
         }
     }
+
+    async login(req, res) {
+        try {
+            const { username: usernamePayload = "", password: passwordPayload = "" } = req.body;
+
+            // check username's format
+            if (!isValidUsername(usernamePayload)) {
+                return res.status(403).json({
+                    title: "Error",
+                    message: "Invalid username",
+                });
+            }
+
+            // // check password's format
+            if (!isValidPassword(passwordPayload))
+                return res.status(403).json({
+                    title: "Error",
+                    message: "Invalid password",
+                });
+
+            let user = await userModel
+                .findOne({ username: usernamePayload })
+                .select("username password first_name middle_initial last_name gender phone_number email");
+
+            if (!user) {
+                return res.status(403).json({
+                    title: "Error",
+                    message: "Username or password is not correct",
+                });
+            }
+
+            const isMatchPW = await bcrypt.compare(passwordPayload, user.password);
+            if (!isMatchPW) {
+                return res.status(403).json({
+                    title: "Error",
+                    message: "Username or password is not correct",
+                });
+            }
+
+            // create tokens
+            const refreshToken = generateRefreshToken({ user_id: user.user_id, username: user.username });
+            const accessToken = generateAccessToken({ user_id: user.user_id, username: user.username });
+
+            // update refresh token for new user
+            const newRefreshToken = new refreshTokenModel({ refresh_token_value: refreshToken, user_id: user.user_id });
+            await newRefreshToken.save();
+
+            // save refresh token as cookie
+            res.cookie("refresh-token", refreshToken, {
+                httpOnly: true,
+                secure: true,
+                path: "/",
+                sameSite: "strict",
+                expires: new Date(Date.now() + 30 * 24 * 3600000), // 30 days
+            });
+
+            const { user_id, username, first_name, middle_initial, last_name, gender, phone_number, email } = user._doc;
+
+            return res.status(200).json({
+                title: "Success",
+                user: { user_id, username, first_name, middle_initial, last_name, gender, phone_number, email },
+                token: accessToken,
+            });
+        } catch (error) {
+            res.status(500).json({ title: "Error", message: error.message });
+        }
+    }
+
     async logout(req, res) {
         try {
             const refreshToken = req.cookies["refresh-token"];
@@ -124,17 +172,21 @@ class Auth {
                     message: "Unauthenticated 1",
                 });
             }
-            const { USER_ID } = req.user;
+            const { user_id } = req.user;
+            // remove refresh token from database
             const hasExistedToken = await refreshTokenModel.findOneAndDelete({
-                USER_ID,
-                REFRESH_TOKEN_VALUE: refreshToken,
+                user_id,
+                refresh_token_value: refreshToken,
             });
+
             if (!!!hasExistedToken) {
                 return res.status(401).json({
                     title: "Error",
                     message: "Unauthenticated 2",
                 });
             }
+
+            // clear refresh-token cookie from client
             res.clearCookie("refresh-token");
 
             res.status(200).json({ title: "Success", message: "Log out successfully" });
@@ -154,9 +206,9 @@ class Auth {
                 });
             }
 
-            const hasExistedToken = await refreshTokenModel.findOne({
-                USER_ID: userId,
-                REFRESH_TOKEN_VALUE: refreshToken,
+            const hasExistedToken = await refreshTokenModel.findOneAndDelete({
+                user_id: userId,
+                refresh_token_value: refreshToken,
             });
 
             if (!hasExistedToken) {
@@ -166,19 +218,21 @@ class Auth {
                 });
             }
 
-            jwt.verify(refreshToken, process.env.REFRESH_TOKEN, async (err, user) => {
+            // verify refresh token is valid
+            jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, async (err, user) => {
                 if (err)
                     return res.status(401).json({
                         title: "Error",
                         message: "Unauthenticated 3",
                     });
 
-                const { USER_ID, EMAIL } = user;
+                const { user_id, email } = user;
 
-                const newRefreshToken = generateRefreshToken({ USER_ID, EMAIL });
-                const accessToken = generateAccessToken({ USER_ID, EMAIL });
+                const newRefreshToken = generateRefreshToken({ user_id, email });
+                const accessToken = generateAccessToken({ user_id, email });
 
-                await refreshToken.create({ USER_ID: user.USER_ID, REFRESH_TOKEN_VALUE: newRefreshToken });
+                // create new fresh token
+                await refreshTokenModel.create({ user_id, refresh_token_value: newRefreshToken });
 
                 res.cookie("refresh-token", newRefreshToken, {
                     maxAge: 1000 * 60 * 60 * 24 * 30,

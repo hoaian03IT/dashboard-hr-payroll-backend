@@ -28,7 +28,7 @@ async function connectMySQL() {
 async function connectMongoDB() {
     try {
         const stringConnection = process.env.MONGODB_STRING_CONNECTION;
-        await mongoose.createConnection(stringConnection);
+        await mongoose.connect(stringConnection);
         console.log("Connect to MongoDB successfully");
     } catch (error) {
         console.error("Connect to MongoDB failed - " + error.message);

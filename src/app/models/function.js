@@ -2,15 +2,15 @@ const mongoose = require("mongoose");
 
 const functionModel = new mongoose.Schema(
     {
-        FUNCTION_ID: { type: mongoose.Types.ObjectId, default: new mongoose.Types.ObjectId(), unique: true },
-        FUNCTION_NAME: { type: String, required: true },
-        IS_ACTIVE: { type: Boolean, required: true },
-        MODULE_ID: { type: mongoose.Types.ObjectId, required: true, ref: "MODULE" },
+        function_name: { type: String, required: true },
+        is_active: { type: Boolean, required: true },
+        module_id: { type: mongoose.Types.ObjectId, required: true, ref: "Module" },
     },
-    {
-        timestamps: true,
-        _id: false,
-    }
+    { id: false, timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
-module.exports = new mongoose.model("FUNCTION", functionModel);
+functionModel.virtual("function_id").get(function () {
+    return this._id.toString();
+});
+
+module.exports = new mongoose.model("Function", functionModel);

@@ -2,14 +2,14 @@ const mongoose = require("mongoose");
 
 const userGroupSchema = new mongoose.Schema(
     {
-        USER_GROUP: { type: mongoose.Types.ObjectId, default: new mongoose.Types.ObjectId(), unique: true },
-        USER_ID: { type: mongoose.Types.ObjectId, required: true, ref: "USER" },
-        GROUP_ID: { type: mongoose.Types.ObjectId, required: true, ref: "GROUP" },
+        user_id: { type: mongoose.Types.ObjectId, required: true, ref: "User" },
+        group_id: { type: mongoose.Types.ObjectId, required: true, ref: "Group" },
     },
-    {
-        timestamps: true,
-        _id: false,
-    }
+    { id: false, timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
-module.exports = new mongoose.model("USER_GROUP", userGroupSchema);
+userGroupSchema.virtual("user_group_id").get(function () {
+    return this._id.toString();
+});
+
+module.exports = new mongoose.model("UserGroup", userGroupSchema);

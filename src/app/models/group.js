@@ -2,14 +2,14 @@ const mongoose = require("mongoose");
 
 const groupSchema = new mongoose.Schema(
     {
-        GROUP_ID: { type: mongoose.Types.ObjectId, default: new mongoose.Types.ObjectId(), unique: true },
-        GROUP_NAME: { type: String, required: true },
-        DESCRIPTION: { type: String, required: false, default: "" },
+        group_name: { type: String, required: true },
+        description: { type: String, required: false, default: "" },
     },
-    {
-        timestamps: true,
-        _id: false,
-    }
+    { id: false, timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
-module.exports = new mongoose.model("GROUP", groupSchema);
+groupSchema.virtual("group_id").get(function () {
+    return this._id.toString();
+});
+
+module.exports = new mongoose.model("Group", groupSchema);

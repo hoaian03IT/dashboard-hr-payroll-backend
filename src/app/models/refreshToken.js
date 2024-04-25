@@ -2,11 +2,14 @@ const mongoose = require("mongoose");
 
 const refreshTokenSchema = new mongoose.Schema(
     {
-        REFRESH_TOKEN_ID: { type: mongoose.Types.ObjectId, unique: true, default: new mongoose.Types.ObjectId() },
-        REFRESH_TOKEN_VALUE: { type: String, required: true },
-        USER_ID: { type: mongoose.Types.ObjectId, required: true, ref: "USER" },
+        refresh_token_value: { type: String, required: true },
+        user_id: { type: mongoose.Types.ObjectId, required: true, ref: "User" },
     },
-    { timestamps: true, _id: false }
+    { id: false, timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
-module.exports = new mongoose.model("REFRESH_TOKEN", refreshTokenSchema);
+refreshTokenSchema.virtual("refresh_token_id").get(function () {
+    return this._id.toString();
+});
+
+module.exports = new mongoose.model("RefreshToken", refreshTokenSchema);

@@ -2,12 +2,15 @@ const mongoose = require("mongoose");
 
 const userFunctionSchema = new mongoose.Schema(
     {
-        USER_FUNCTION_ID: { type: mongoose.Types.ObjectId, unique: true, default: new mongoose.Types.ObjectId() },
-        USER_ID: { type: mongoose.Types.ObjectId, required: true, ref: "USER" },
-        FUNCTION_ID: { type: mongoose.Types.ObjectId, required: true, ref: "FUNCTION" },
-        IS_ACTIVE: { type: Boolean, required: true },
+        user_id: { type: mongoose.Types.ObjectId, required: true, ref: "User" },
+        function_id: { type: mongoose.Types.ObjectId, required: true, ref: "Function" },
+        is_active: { type: Boolean, required: true },
     },
-    { timestamps: true, _id: false }
+    { id: false, timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
-module.exports = new mongoose.model("USER_FUNCTION", userFunctionSchema);
+userFunctionSchema.virtual("user_function_id").get(function () {
+    return this._id.toString();
+});
+
+module.exports = new mongoose.model("UserFunction", userFunctionSchema);

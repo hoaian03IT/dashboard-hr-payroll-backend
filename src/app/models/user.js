@@ -2,20 +2,25 @@ const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
     {
-        USER_ID: { type: mongoose.Types.ObjectId, default: new mongoose.Types.ObjectId(), unique: true },
-        USERNAME: { type: String, required: true, unique: true },
-        PASSWORD: { type: String, required: true },
-        FIRST_NAME: { type: String, required: true },
-        MIDDLE_INITIAL: { type: String, required: true },
-        LAST_NAME: { type: String, required: true },
-        GENDER: { type: String, required: true },
-        PHONE_NUMBER: { type: String, required: true, unique: true },
-        EMAIL: { type: String, required: true, unique: true },
+        username: { type: String, required: true, unique: true },
+        password: { type: String, required: true },
+        first_name: { type: String, required: true },
+        middle_initial: { type: String, default: "" },
+        last_name: { type: String, required: true },
+        gender: { type: String, required: true },
+        phone_number: { type: String, required: true, unique: true },
+        email: { type: String, required: true, unique: true },
     },
     {
+        id: false,
         timestamps: true,
-        _id: false,
+        toJSON: { virtuals: true },
+        toObject: { virtuals: true },
     }
 );
 
-module.exports = new mongoose.model("USER", userSchema);
+userSchema.virtual("user_id").get(function () {
+    return this._id.toString();
+});
+
+module.exports = new mongoose.model("User", userSchema);

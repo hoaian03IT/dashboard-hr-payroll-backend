@@ -2,15 +2,15 @@ const mongoose = require("mongoose");
 
 const moduleSchema = new mongoose.Schema(
     {
-        MODULE_ID: { type: mongoose.Types.ObjectId, default: new mongoose.Types.ObjectId(), unique: true },
-        MODULE_NAME: { type: String, required: true },
-        DESCRIPTION: { type: String, required: false, default: "" },
-        IS_ACTIVE: { type: Boolean, required: true },
+        module_name: { type: String, required: true },
+        description: { type: String, required: false, default: "" },
+        is_active: { type: Boolean, required: true },
     },
-    {
-        timestamps: true,
-        _id: false,
-    }
+    { id: false, timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
-module.exports = new mongoose.model("MODULE", moduleSchema);
+moduleSchema.virtual("module_id").get(function () {
+    return this._id;
+});
+
+module.exports = new mongoose.model("Module", moduleSchema);
