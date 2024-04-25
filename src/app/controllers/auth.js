@@ -1,5 +1,6 @@
 const { generateRefreshToken, generateAccessToken } = require("../../utils/generateToken");
 const { userModel, refreshTokenModel } = require("../models");
+const bcrypt = require("bcrypt");
 
 const MAX_LENGTH_USERNAME = 256;
 const MIN_LENGTH_USERNAME = 0;
@@ -104,7 +105,7 @@ class Auth {
                 EMAIL: email,
             });
 
-            newUser.save();
+            await newUser.save();
 
             return res.status(200).json({
                 title: "Success",
