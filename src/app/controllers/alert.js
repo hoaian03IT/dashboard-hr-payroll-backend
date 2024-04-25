@@ -9,10 +9,11 @@ class Alert {
             const month = date.getMonth() + 1;
             const day = date.getDate();
             const sqlString =
-                "select E.EMPLOYMENT_ID,(P.CURRENT_FIRST_NAME+' '+P.CURRENT_MIDDLE_NAME+' '+P.CURRENT_LAST_NAME) AS FULLNAME,E.HIRE_DATE_FOR_WORKING,YEAR(GETDATE())-YEAR(E.HIRE_DATE_FOR_WORKING) AS ANNIVESARY " +
+                "select P.CURRENT_FIRST_NAME,P.CURRENT_LAST_NAME,(P.CURRENT_FIRST_NAME+' '+P.CURRENT_LAST_NAME) AS FULLNAME,E.EMPLOYMENT_ID,E.HIRE_DATE_FOR_WORKING,YEAR(GETDATE())-YEAR(E.HIRE_DATE_FOR_WORKING) AS ANNIVESARY " +
                 "from PERSONAL P INNER JOIN EMPLOYMENT E ON P.PERSONAL_ID=E.PERSONAL_ID " +
                 `where MONTH(E.HIRE_DATE_FOR_WORKING) = ${month} AND DAY(E.HIRE_DATE_FOR_WORKING)= ${day} `;
             const result = await conn.request().query(sqlString);
+            conn.close();
             return res.status(200).json({
                 data: result.recordset,
             });
@@ -26,8 +27,15 @@ class Alert {
     async getVacationDate(req, res) {
         try {
             const conn = await connectMySQL();
-            const [results, fields] = await conn.query("select * from Employee");
+            const [results, fields] = await conn.query(
+                "SELECT `First Name` AS FIRSTNAME, `Last Name`AS LASTNAME,idEmployee,`Vacation Days` AS VACATIONDAYS FROM Employee "
+            );
+            conn.close();
             return res.status(200).json({
+                fields: fields.map((field) => ({
+                    name: field.name,
+                    type: field.type,
+                })),
                 data: results,
             });
         } catch (error) {
