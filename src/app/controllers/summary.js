@@ -151,6 +151,58 @@ class Summary {
             });
         }
     }
+
+    async getSummaryVacationDays(req, res) {
+        try {
+            const connSQL = await connectSQL();
+
+            let queryString = `select sum(TOTAL_NUMBER_VACATION_WORKING_DAYS_PER_MONTH) as TOTAL_VACATION_DAYS from EMPLOYMENT_WORKING_TIME`;
+            const { recordset: vacationDayToDate } = await connSQL.request().query(queryString);
+
+            queryString = `select sum(TOTAL_NUMBER_VACATION_WORKING_DAYS_PER_MONTH) as TOTAL_VACATION_DAYS  from EMPLOYMENT_WORKING_TIME
+                        where YEAR(YEAR_WORKING)<YEAR(GETDATE())`;
+
+            const { recordset: vacationDayToPreviousYear } = await connSQL.request().query(queryString);
+
+            connSQL.close();
+            res.status(200).json({
+                toDate: vacationDayToDate[0].TOTAL_VACATION_DAYS,
+                toPreviousYear: vacationDayToPreviousYear[0].TOTAL_VACATION_DAYS,
+            });
+        } catch (error) {
+            res.status(500).json({
+                title: "Error",
+                message: error.message,
+            });
+        }
+    }
+
+    async getEmployeeVacationDay(req, res) {
+        try {
+            const { employeeCode = "", gender = "" } = req.query;
+
+            const connSQL = await connectSQL();
+
+            let queryString = `select CURRENT_FIRST_NAME, CURRENT_LAST_NAME, T.EMPLOYMENT_CODE, SHAREHOLDER_STATUS, CURRENT_GENDER, ETHNICITY, EMPLOYMENT_STATUS, TOTAL_VD from PERSONAL P, (
+                            select EMPLOYMENT_CODE, sum(TOTAL_NUMBER_VACATION_WORKING_DAYS_PER_MONTH) as TOTAL_VD 
+                            from EMPLOYMENT_WORKING_TIME ET, EMPLOYMENT E
+                            where E.EMPLOYMENT_ID=ET.EMPLOYMENT_ID
+                            group by EMPLOYMENT_CODE
+                            ) T, EMPLOYMENT E
+                            where T.EMPLOYMENT_CODE=E.EMPLOYMENT_CODE and E.PERSONAL_ID=P.PERSONAL_ID ${
+                                employeeCode ? `and T.EMPLOYMENT_CODE='${employeeCode}'` : ""
+                            } ${gender ? `and CURRENT_GENDER='${gender}'` : ""}`;
+            const { recordset } = await connSQL.request().query(queryString);
+            connSQL.close();
+
+            res.status(200).json(recordset);
+        } catch (error) {
+            res.status(500).json({
+                title: "Error",
+                message: error.message,
+            });
+        }
+    }
 }
 
 module.exports = new Summary();
