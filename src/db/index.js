@@ -14,7 +14,6 @@ async function connectMySQL() {
             waitForConnections: true,
             connectionLimit: 10,
             idleTimeout: 60000,
-            rowsAsArray: true,
         };
         const pool = mysql.createPool(mysqlConfig);
         conn = await pool.getConnection();
