@@ -26,16 +26,16 @@ class Alert {
     }
     async getVacationDate(req, res) {
         try {
+            const MAX_VACATION_DAYS = 20;
             const conn = await connectMySQL();
-            const [results, fields] = await conn.query(
-                "SELECT `First Name` AS FIRSTNAME, `Last Name`AS LASTNAME,idEmployee,`Vacation Days` AS VACATIONDAYS FROM Employee "
+            const [results] = await conn.query(
+                "SELECT `First Name` AS FIRSTNAME, `Last Name`AS LASTNAME,idEmployee,`Vacation Days` AS VACATIONDAYS,ABS( `Vacation Days`-" +
+                    `${MAX_VACATION_DAYS}) AS OVERDAYS  FROM Employee WHERE ` +
+                    "`Vacation Days`>20"
             );
+
             conn.close();
             return res.status(200).json({
-                fields: fields.map((field) => ({
-                    name: field.name,
-                    type: field.type,
-                })),
                 data: results,
             });
         } catch (error) {
@@ -49,6 +49,7 @@ class Alert {
     async getBirthdayAnniversary(req, res) {
         try {
             const { month } = req.query;
+
             if (!month) {
                 return res.status(403).json({ title: "Error", message: "Invalid month" });
             }
@@ -56,10 +57,12 @@ class Alert {
             const results = await conn
                 .request()
                 .query(
-                    "SELECT CURRENT_FIRST_NAME, CURRENT_LAST_NAME, CURRENT_MIDDLE_NAME, EMPLOYMENT_ID, BIRTH_DATE, CURRENT_GENDER, CURRENT_PERSONAL_EMAIL, CURRENT_PHONE_NUMBER FROM PERSONAL P, EMPLOYMENT E " +
+                    "SELECT (CURRENT_FIRST_NAME+' '+ CURRENT_LAST_NAME) AS FULLNAME, EMPLOYMENT_ID, BIRTH_DATE, CURRENT_GENDER, CURRENT_PERSONAL_EMAIL, CURRENT_PHONE_NUMBER, (YEAR(GETDATE())-YEAR(BIRTH_DATE)) AS AGE FROM PERSONAL P, EMPLOYMENT E " +
                         `WHERE P.PERSONAL_ID=E.PERSONAL_ID AND E.TERMINATION_DATE IS NULL AND MONTH(BIRTH_DATE)=${month}`
                 );
-            res.status(200).json({ results });
+            return res.status(200).json({
+                data: results.recordset,
+            });
         } catch (error) {
             return res.status(500).json({
                 title: "Error",
