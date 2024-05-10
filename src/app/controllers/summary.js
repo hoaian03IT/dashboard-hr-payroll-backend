@@ -45,7 +45,7 @@ class Summary {
                 `select EMPLOYMENT_CODE from PERSONAL P, EMPLOYMENT E where P.PERSONAL_ID=E.PERSONAL_ID AND SHAREHOLDER_STATUS=${isShareholder}`;
             const queryAvgAmountStr = (records = []) =>
                 `select round(sum(\`Paid To Date\`),1) as \`Sum Amount\`,  round(avg(\`Paid To Date\`), 1) as \`Average Amount\` from employee e where e.\`Employee Number\` in (${records.map(
-                    (record) => Number(record.EMPLOYMENT_CODE)
+                    (record) => `'${record.EMPLOYMENT_CODE}'`
                 )})`;
 
             // query benefit paid for shareholder
@@ -57,7 +57,7 @@ class Summary {
             const [[amountOfNonShareholders]] = await connMySQL.query(queryAvgAmountStr(nonShareholderIds));
 
             connSQL.close();
-            connMySQL.release();
+            connMySQL.end();
 
             res.status(200).json({
                 average: {
@@ -121,7 +121,9 @@ class Summary {
             tmp = [];
             for (let i = 0; i < results.length; i++) {
                 let queryString = `select round(sum(\`Pay Amount\`),1) as \`Sum Amount\`,  round(avg(\`Pay Amount\`), 1) as \`Average Amount\` from \`pay rates\` p, employee e 
-                                where p.\`idPay Rates\`=e.\`Pay Rates_idPay Rates\` and e.\`Employee Number\` in (${results[i].employmentCodes})`;
+                                where p.\`idPay Rates\`=e.\`Pay Rates_idPay Rates\` and e.\`Employee Number\` in (${results[
+                                    i
+                                ]?.employmentCodes?.map((code) => `'${code}'`)})`;
                 const [[amount]] = await connMySQL.query(queryString);
                 const { BENEFIT_PLAN_ID, PLAN_NAME, DEDUCTABLE, PERCENTAGE_COPAY } = results[i];
                 results[i] = {
@@ -134,7 +136,7 @@ class Summary {
                 };
             }
 
-            connMySQL.release();
+            connMySQL.end();
 
             res.status(200).json(results);
         } catch (error) {
@@ -204,7 +206,7 @@ class Summary {
                 "select sum(`Paid To Date`) as `Total To Date`, sum(`Paid Last Year`) as `Total To Previous Year` from employee;";
 
             const [[result]] = await connMySQL.query(queryString);
-            connMySQL.release();
+            connMySQL.end();
 
             res.status(200).json({
                 totalToDate: result["Total To Date"],
