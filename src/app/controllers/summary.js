@@ -35,13 +35,6 @@ class Summary {
         }
     }
 
-    async getEarningByShareholder(req, res) {
-        try {
-            const conn = await connectSQL();
-            const [rows] = await conn.request.query();
-        } catch (error) {}
-    }
-
     async getBenefitPaid(req, res) {
         try {
             const connSQL = await connectSQL();
@@ -51,7 +44,7 @@ class Summary {
             const queryIdShareholderStr = (isShareholder = 0) =>
                 `select EMPLOYMENT_CODE from PERSONAL P, EMPLOYMENT E where P.PERSONAL_ID=E.PERSONAL_ID AND SHAREHOLDER_STATUS=${isShareholder}`;
             const queryAvgAmountStr = (records = []) =>
-                `select round(sum(\`Pay Amount\`),1) as \`Sum Amount\`,  round(avg(\`Pay Amount\`), 1) as \`Average Amount\` from \`pay rates\` p, employee e where p.\`idPay Rates\`=e.\`Pay Rates_idPay Rates\` and e.\`Employee Number\` in (${records.map(
+                `select round(sum(\`Paid To Date\`),1) as \`Sum Amount\`,  round(avg(\`Paid To Date\`), 1) as \`Average Amount\` from employee e where e.\`Employee Number\` in (${records.map(
                     (record) => Number(record.EMPLOYMENT_CODE)
                 )})`;
 
@@ -69,11 +62,11 @@ class Summary {
             res.status(200).json({
                 average: {
                     shareholder: amountOfShareholders["Average Amount"],
-                    nonShareHolder: amountOfNonShareholders["Average Amount"],
+                    nonShareholder: amountOfNonShareholders["Average Amount"],
                 },
                 total: {
                     shareholder: amountOfShareholders["Sum Amount"],
-                    nonShareHolder: amountOfNonShareholders["Sum Amount"],
+                    nonShareholder: amountOfNonShareholders["Sum Amount"],
                 },
             });
         } catch (error) {
@@ -202,6 +195,33 @@ class Summary {
                 message: error.message,
             });
         }
+    }
+
+    async getSummaryEarnings(req, res) {
+        try {
+            const connMySQL = await connectMySQL();
+            let queryString =
+                "select sum(`Paid To Date`) as `Total To Date`, sum(`Paid Last Year`) as `Total To Previous Year` from employee;";
+
+            const [[result]] = await connMySQL.query(queryString);
+            connMySQL.release();
+
+            res.status(200).json({
+                totalToDate: result["Total To Date"],
+                totalToPreviousYear: result["Total To Previous Year"],
+            });
+        } catch (error) {
+            res.status(500).json({
+                title: "Error",
+                message: error.message,
+            });
+        }
+    }
+
+    async getEarningByDepartment(req, res) {
+        try {
+            const connMySQL = await connectMySQL();
+        } catch (error) {}
     }
 }
 
