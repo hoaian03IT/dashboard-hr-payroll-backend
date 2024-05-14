@@ -9,5 +9,6 @@ router.get("/employment", employee.getEmployee);
 router.post("/addEmployee", employee.addEmployee);
 router.post("/updateEmployee", employee.updateEmployee);
 router.delete("/deleteEmployee", employee.deleteEmployee);
+router.get("/listEmployee", employee.findEmployee);
 
 module.exports = router;

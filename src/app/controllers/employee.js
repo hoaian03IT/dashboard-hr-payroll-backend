@@ -53,7 +53,6 @@ class employee {
             const conn = await connectSQL();
             const countPersonal = await conn.request().query("select count(*) as count from PERSONAL");
             const count = countPersonal.recordset[0].count;
-            console.log(birthday);
             const sqlString = `insert into PERSONAL VALUES(${count + 1},'${fistName}','${lastName}','${middleName}'
             ,CONVERT(date, '${birthday}', 23),'${SSN}','${driverlicense}','${address1}','${address2}'
             ,'${city}','${country}','${zip}','${gender}','${phoneNumber}','${email}','${maritalStatus}','${ethnicity}'
@@ -122,6 +121,21 @@ class employee {
             const conn = await connectSQL();
             const sqlString =
                 "select * from Employment inner join PERSONAL on PERSONAL.PERSONAL_ID=EMPLOYMENT.PERSONAL_ID ";
+            const result = await conn.request().query(sqlString);
+            conn.close();
+            return res.status(200).json({
+                data: result.recordset,
+            });
+        } catch (error) {
+            res.status(500).json({ title: "Error", message: error.message });
+        }
+    }
+    async findEmployee(req, res) {
+        try {
+            let { employeeCode } = req.query;
+            const conn = await connectSQL();
+            const sqlString = `select * from Employment inner join PERSONAL on PERSONAL.PERSONAL_ID=EMPLOYMENT.PERSONAL_ID 
+            where EMPLOYMENT.EMPLOYMENT_CODE='${employeeCode}'`;
             const result = await conn.request().query(sqlString);
             conn.close();
             return res.status(200).json({
