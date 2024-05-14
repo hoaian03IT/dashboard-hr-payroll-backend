@@ -25,7 +25,7 @@ class Summary {
     async getEarningByDepartment(req, res) {
         try {
             const conn = await connectSQL();
-            // const [rows] = await conn.request.query();
+
             conn.close();
         } catch (error) {
             res.status(500).json({
@@ -218,12 +218,6 @@ class Summary {
                 message: error.message,
             });
         }
-    }
-
-    async getEarningByDepartment(req, res) {
-        try {
-            const connMySQL = await connectMySQL();
-        } catch (error) {}
     }
 }
 

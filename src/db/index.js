@@ -15,8 +15,7 @@ async function connectMySQL() {
             connectionLimit: 10,
             idleTimeout: 60000,
         };
-        const pool = mysql.createPool(mysqlConfig);
-        conn = await pool.getConnection();
+        conn = await mysql.createConnection(mysqlConfig);
         console.log("Connect to MySQL successfully");
     } catch (error) {
         console.error("Connect to MySQL failed" + error.message);
