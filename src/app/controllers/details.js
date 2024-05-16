@@ -21,7 +21,7 @@ const processHandleRecordsEarnings = async (connectMySQL, recordset) => {
 
     for (let record of recordset) {
         const [payRateInfos] = await connectMySQL.query(
-            `select  \`Employee Number\`, \`Pay Type\`, \`Value\`, \`Tax Percentage\` from \`employee pay rates\`where \`Employee Number\`='${record.EMPLOYMENT_CODE}' limit 1`
+            `select  \`Employee Number\`, \`Pay Type\`, \`Value\`, \`Tax Percentage\`, \`Pay Amount\` from \`employee pay rates\`where \`Employee Number\`='${record.EMPLOYMENT_CODE}' limit 1`
         );
         let amount;
         // pay rate
@@ -29,12 +29,10 @@ const processHandleRecordsEarnings = async (connectMySQL, recordset) => {
         // 0: full time
         if (payRateInfos[0]["Pay Type"] === 1) {
             const hoursPerDay = 4;
-            amount = record["TOTAL_WORKING_DAYS"] * payRateInfos[0]["Value"] * hoursPerDay;
+            amount = payRateInfos[0]["Pay Amount"] * hoursPerDay * record["TOTAL_WORKING_DAYS"];
             result["type-employment"]["part-time"] += amount;
         } else if (payRateInfos[0]["Pay Type"] === 0) {
-            const actualPayValue =
-                payRateInfos[0]["Value"] - (payRateInfos[0]["Value"] * payRateInfos[0][`Tax Percentage`]) / 100;
-            amount = Number(record["TOTAL_WORKING_MONTH"]) * actualPayValue;
+            amount = payRateInfos[0]["Pay Amount"] * record["TOTAL_WORKING_MONTH"];
             result["type-employment"]["full-time"] += amount;
         }
 
