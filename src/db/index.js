@@ -16,7 +16,6 @@ async function connectMySQL() {
             idleTimeout: 60000,
         };
         conn = await mysql.createConnection(mysqlConfig);
-        console.log("Connect to MySQL successfully");
     } catch (error) {
         console.error("Connect to MySQL failed" + error.message);
     }
@@ -48,7 +47,6 @@ async function connectSQL() {
     };
     try {
         conn = await new sql.ConnectionPool(sqlConfig).connect();
-        console.log("Connect to SQL Server successfully");
     } catch (error) {
         console.error("Connect to SQL Server failed - " + error);
     }

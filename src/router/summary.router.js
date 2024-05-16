@@ -7,6 +7,5 @@ router.get("/benefit-paid", summaryController.getBenefitPaid);
 router.get("/benefit-plans", summaryController.getBenefitPlanSummary);
 router.get("/vacation-days", summaryController.getSummaryVacationDays);
 router.get("/employment-vacation-day", summaryController.getEmployeeVacationDay);
-router.get("/earnings", summaryController.getSummaryEarnings);
 
 module.exports = router;

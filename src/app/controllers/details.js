@@ -1,45 +1,22 @@
 const { connectSQL, connectMySQL } = require("../../db");
-
-const ensureMySQLViewExists = async (connectMySQL, view, createViewStr) => {
-    try {
-        await connectMySQL.query(`select top 1 * from ${view}`);
-    } catch (error) {
-        try {
-            await connectMySQL.query(createViewStr);
-        } catch (error) {
-            console.error(error.message);
-        }
-    }
-};
-
-const ensureSQLViewExists = async (connectSQL, view, createViewStr) => {
-    try {
-        await connectSQL.request().query(`select top 1 * from ${view}`);
-    } catch (error) {
-        try {
-            await connectSQL.request().query(createViewStr);
-        } catch (error) {
-            console.error(error.message);
-        }
-    }
-};
+const { ensureSQLViewExists, ensureMySQLViewExists } = require("../../utils/checkViewExist");
 
 const processHandleRecordsEarnings = async (connectMySQL, recordset) => {
     // init result
     const result = {
-        shareholderStatus: {
+        "shareholder-status": {
             shareholder: 0,
-            nonShareholder: 0,
+            "non-shareholder": 0,
         },
-        genderStatus: {
+        gender: {
             male: 0,
             female: 0,
         },
-        employmentStatus: {
-            fullTime: 0,
-            partTime: 0,
+        "type-employment": {
+            "full-time": 0,
+            "part-time": 0,
         },
-        ethnicityStatus: {},
+        ethnicity: {},
     };
 
     for (let record of recordset) {
@@ -53,28 +30,30 @@ const processHandleRecordsEarnings = async (connectMySQL, recordset) => {
         if (payRateInfos[0]["Pay Type"] === 1) {
             const hoursPerDay = 4;
             amount = record["TOTAL_WORKING_DAYS"] * payRateInfos[0]["Value"] * hoursPerDay;
-            result.employmentStatus.partTime += amount;
+            result["type-employment"]["part-time"] += amount;
         } else if (payRateInfos[0]["Pay Type"] === 0) {
-            amount = record["TOTAL_WORKING_DAYS"] * payRateInfos[0]["Value"];
-            result.employmentStatus.fullTime += amount;
+            const actualPayValue =
+                payRateInfos[0]["Value"] - (payRateInfos[0]["Value"] * payRateInfos[0][`Tax Percentage`]) / 100;
+            amount = Number(record["TOTAL_WORKING_MONTH"]) * actualPayValue;
+            result["type-employment"]["full-time"] += amount;
         }
 
         // shareholder_status
         // 0: non-shareholder
         // 1: shareholder
-        if (record.SHAREHOLDER_STATUS === 0) result.shareholderStatus.nonShareholder += amount;
-        else result.shareholderStatus.shareholder += amount;
+        if (record.SHAREHOLDER_STATUS === 0) result["shareholder-status"]["non-shareholder"] += amount;
+        else result["shareholder-status"].shareholder += amount;
 
         // gender_status
-        // 0: male
-        // 1: female
-        if (record.CURRENT_GENDER === 0) result.genderStatus.male += amount;
-        else result.genderStatus.female += amount;
+        const maleGender = ["male", "Male", "Men", "men"];
+        const femaleGender = ["female", "Female", "Women", "women"];
+        if (maleGender.includes(record.CURRENT_GENDER)) result["gender"].male += amount;
+        else if (femaleGender.includes(record.CURRENT_GENDER)) result["gender"].female += amount;
 
-        if (result.ethnicityStatus[record.ETHNICITY] === undefined) {
-            result.ethnicityStatus[record.ETHNICITY] = amount;
+        if (result.ethnicity[record.ETHNICITY] === undefined) {
+            result.ethnicity[record.ETHNICITY] = amount;
         } else {
-            result.ethnicityStatus[record.ETHNICITY] += amount;
+            result.ethnicity[record.ETHNICITY] += amount;
         }
     }
 
@@ -87,26 +66,10 @@ class Details {
             const connSQL = await connectSQL();
             const connMySQL = await connectMySQL();
 
-            let createViewStr = `create view EMPLOYMENT_TOTAL_WORKING_DAYS_TO_DATE as
-            select EMPLOYMENT_CODE , sum(NUMBER_DAYS_ACTUAL_OF_WORKING_PER_MONTH) as TOTAL_WORKING_DAYS
-            from EMPLOYMENT E, EMPLOYMENT_WORKING_TIME EWT
-            where E.EMPLOYMENT_ID=EWT.EMPLOYMENT_ID and YEAR_WORKING >= HIRE_DATE_FOR_WORKING and (TERMINATION_DATE is NULL or YEAR_WORKING <= TERMINATION_DATE)
-            group by EMPLOYMENT_CODE`;
+            let queryStr = `select E.EMPLOYMENT_CODE, TOTAL_WORKING_DAYS, TOTAL_WORKING_MONTH, SHAREHOLDER_STATUS, CURRENT_GENDER, ETHNICITY, EMPLOYMENT_STATUS from EMPLOYMENT_TOTAL_WORKING_DAYS_TO_DATE EWTE, EMPLOYMENT E, PERSONAL P
+            where E.PERSONAL_ID=P.PERSONAL_ID and EWTE.EMPLOYMENT_CODE=E.EMPLOYMENT_CODE order by ETHNICITY`;
 
-            // check and create view EMPLOYMENT_TOTAL_WORKING_DAYS_TO_DATE
-            await ensureSQLViewExists(connSQL, "EMPLOYMENT_TOTAL_WORKING_DAYS_TO_DATE", createViewStr);
-
-            let queryStr = `select E.EMPLOYMENT_CODE, TOTAL_WORKING_DAYS, SHAREHOLDER_STATUS, CURRENT_GENDER, ETHNICITY, EMPLOYMENT_STATUS from EMPLOYMENT_TOTAL_WORKING_DAYS_TO_DATE EWTE, EMPLOYMENT E, PERSONAL P
-            where E.PERSONAL_ID=P.PERSONAL_ID and EWTE.EMPLOYMENT_CODE=E.EMPLOYMENT_CODE`;
             let { recordset } = await connSQL.request().query(queryStr);
-
-            createViewStr = `create view \`employee pay rates\` as 
-            select \`Employee Number\`, p.\`idPay Rates\`, \`Value\`, \`Tax Percentage\`, \`Pay Type\` from employee e, \`pay rates\` p
-            where e.\`Pay Rates_idPay Rates\`=p.\`idPay Rates\`
-            `;
-
-            // check and create view EMPLOYMENT_TOTAL_WORKING_DAYS_TO_DATE
-            await ensureMySQLViewExists(connectMySQL, "`employee pay rates`", createViewStr);
 
             // handle recordset
             const result = await processHandleRecordsEarnings(connMySQL, recordset);
@@ -124,31 +87,27 @@ class Details {
             const connSQL = await connectSQL();
             const connMySQL = await connectMySQL();
 
-            let createViewStr = `create view EMPLOYMENT_TOTAL_WORKING_DAYS_TO_PREVIOUS_YEAR as
-            select EMPLOYMENT_CODE , sum(NUMBER_DAYS_ACTUAL_OF_WORKING_PER_MONTH) as TOTAL_WORKING_DAYS
-            from EMPLOYMENT E, EMPLOYMENT_WORKING_TIME EWT
-            where E.EMPLOYMENT_ID=EWT.EMPLOYMENT_ID and YEAR_WORKING >= HIRE_DATE_FOR_WORKING and year(YEAR_WORKING) < year(getdate()) and (TERMINATION_DATE is NULL or YEAR_WORKING <= TERMINATION_DATE)
-            group by EMPLOYMENT_CODE`;
+            let queryStr = `select E.EMPLOYMENT_CODE, TOTAL_WORKING_DAYS, TOTAL_WORKING_MONTH, SHAREHOLDER_STATUS, CURRENT_GENDER, ETHNICITY, EMPLOYMENT_STATUS from EMPLOYMENT_TOTAL_WORKING_DAYS_TO_PREVIOUS_YEAR EWTE, EMPLOYMENT E, PERSONAL P
+            where E.PERSONAL_ID=P.PERSONAL_ID and EWTE.EMPLOYMENT_CODE=E.EMPLOYMENT_CODE order by ETHNICITY`;
 
-            // check and create view EMPLOYMENT_TOTAL_WORKING_DAYS_TO_DATE
-            await ensureSQLViewExists(connSQL, "EMPLOYMENT_TOTAL_WORKING_DAYS_TO_PREVIOUS_YEAR", createViewStr);
-
-            let queryStr = `select E.EMPLOYMENT_CODE, TOTAL_WORKING_DAYS, SHAREHOLDER_STATUS, CURRENT_GENDER, ETHNICITY, EMPLOYMENT_STATUS from EMPLOYMENT_TOTAL_WORKING_DAYS_TO_PREVIOUS_YEAR EWTE, EMPLOYMENT E, PERSONAL P
-            where E.PERSONAL_ID=P.PERSONAL_ID and EWTE.EMPLOYMENT_CODE=E.EMPLOYMENT_CODE`;
             let { recordset } = await connSQL.request().query(queryStr);
-
-            createViewStr = `create view \`employee pay rates\` as 
-            select \`Employee Number\`, p.\`idPay Rates\`, \`Value\`, \`Tax Percentage\`, \`Pay Type\` from employee e, \`pay rates\` p
-            where e.\`Pay Rates_idPay Rates\`=p.\`idPay Rates\`
-            `;
-
-            // check and create view EMPLOYMENT_TOTAL_WORKING_DAYS_TO_DATE
-            await ensureMySQLViewExists(connectMySQL, "`employee pay rates`", createViewStr);
 
             // handle recordset
             const result = await processHandleRecordsEarnings(connMySQL, recordset);
 
             res.status(200).json(result);
+        } catch (error) {
+            res.status(500).json({
+                title: "Error",
+                message: error.message,
+            });
+        }
+    }
+
+    async fetchDetailEarningByList(req, res) {
+        try {
+            const connSQL = await connectSQL();
+            const connMySQL = await connectMySQL();
         } catch (error) {
             res.status(500).json({
                 title: "Error",

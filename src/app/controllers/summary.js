@@ -198,27 +198,6 @@ class Summary {
             });
         }
     }
-
-    async getSummaryEarnings(req, res) {
-        try {
-            const connMySQL = await connectMySQL();
-            let queryString =
-                "select sum(`Paid To Date`) as `Total To Date`, sum(`Paid Last Year`) as `Total To Previous Year` from employee;";
-
-            const [[result]] = await connMySQL.query(queryString);
-            connMySQL.end();
-
-            res.status(200).json({
-                totalToDate: result["Total To Date"],
-                totalToPreviousYear: result["Total To Previous Year"],
-            });
-        } catch (error) {
-            res.status(500).json({
-                title: "Error",
-                message: error.message,
-            });
-        }
-    }
 }
 
 module.exports = new Summary();
