@@ -10,5 +10,6 @@ router.post("/addEmployee", employee.addEmployee);
 router.post("/updateEmployee", employee.updateEmployee);
 router.delete("/deleteEmployee", employee.deleteEmployee);
 router.get("/listEmployee", employee.findEmployee);
+router.get("/getEmployeePayroll", employee.getEmployeePayRoll);
 
 module.exports = router;
