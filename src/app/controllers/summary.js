@@ -27,6 +27,53 @@ const summarizeEarnings = async (recordset, connMySQL) => {
     return total;
 };
 
+const summarizedVacationDays = async (recordset, connMySQL) => {
+    const result = {
+        "shareholder-status": {
+            shareholder: 0,
+            "non-shareholder": 0,
+        },
+        gender: {
+            male: 0,
+            female: 0,
+        },
+        "type-employment": {
+            "full-time": 0,
+            "part-time": 0,
+        },
+        ethnicity: {},
+    };
+    for (let record of recordset) {
+        const [[paymentInfo]] = await connMySQL.query(
+            `select \`Pay Type\` from \`employee pay rates\` where \`Employee Number\`='${record["EMPLOYMENT_CODE"]}'`
+        );
+
+        console.log(record);
+        if (paymentInfo["Pay Type"] === PART_TIME_TYPE) {
+            result["type-employment"]["part-time"] += record["TOTAL_VACATION_DAYS"];
+        } else if (paymentInfo["Pay Type"] === FULL_TIME_TYPE) {
+            result["type-employment"]["full-time"] += record["TOTAL_VACATION_DAYS"];
+        }
+
+        if (record.SHAREHOLDER_STATUS === NON_SHAREHOLDER_STATUS)
+            result["shareholder-status"]["non-shareholder"] += record["TOTAL_VACATION_DAYS"];
+        else result["shareholder-status"].shareholder += record["TOTAL_VACATION_DAYS"];
+
+        // gender_status
+        const maleGender = ["male", "Male", "Men", "men"];
+        const femaleGender = ["female", "Female", "Women", "women"];
+        if (maleGender.includes(record.CURRENT_GENDER)) result["gender"].male += record["TOTAL_VACATION_DAYS"];
+        else if (femaleGender.includes(record.CURRENT_GENDER)) result["gender"].female += record["TOTAL_VACATION_DAYS"];
+
+        if (result.ethnicity[record.ETHNICITY] === undefined) {
+            result.ethnicity[record.ETHNICITY] = record["TOTAL_VACATION_DAYS"];
+        } else {
+            result.ethnicity[record.ETHNICITY] += record["TOTAL_VACATION_DAYS"];
+        }
+    }
+    return result;
+};
+
 class Summary {
     async getTotalEarnings(req, res) {
         try {
@@ -36,12 +83,16 @@ class Summary {
             let { recordset: recordsetToPreviousYear } = await connSQL.request()
                 .query(`select E.EMPLOYMENT_CODE, TOTAL_WORKING_DAYS, TOTAL_WORKING_MONTH, SHAREHOLDER_STATUS, CURRENT_GENDER, ETHNICITY, EMPLOYMENT_STATUS 
             from EMPLOYMENT_TOTAL_WORKING_DAYS_TO_PREVIOUS_YEAR EWTE, EMPLOYMENT E, PERSONAL P
-            where E.PERSONAL_ID=P.PERSONAL_ID and EWTE.EMPLOYMENT_CODE=E.EMPLOYMENT_CODE`);
+            where E.PERSONAL_ID=P.PERSONAL_ID and EWTE.EMPLOYMENT_CODE=E.EMPLOYMENT_CODE
+            order by ETHNICITY
+            `);
 
             let { recordset: recordsetToDate } = await connSQL.request()
                 .query(`select E.EMPLOYMENT_CODE, TOTAL_WORKING_DAYS, TOTAL_WORKING_MONTH, SHAREHOLDER_STATUS, CURRENT_GENDER, ETHNICITY, EMPLOYMENT_STATUS 
             from EMPLOYMENT_TOTAL_WORKING_DAYS_TO_DATE EWTE, EMPLOYMENT E, PERSONAL P
-            where E.PERSONAL_ID=P.PERSONAL_ID and EWTE.EMPLOYMENT_CODE=E.EMPLOYMENT_CODE`);
+            where E.PERSONAL_ID=P.PERSONAL_ID and EWTE.EMPLOYMENT_CODE=E.EMPLOYMENT_CODE
+            order by ETHNICITY
+            `);
 
             // handle recordset
             const totalToPreviousYear = await summarizeEarnings(recordsetToPreviousYear, connMySQL);
@@ -258,7 +309,7 @@ class Summary {
         }
     }
 
-    async getEarningByParts(req, res) {
+    async getEarningByCategory(req, res) {
         try {
             let { end, by } = req.query;
 
@@ -404,6 +455,33 @@ class Summary {
             } else {
                 res.status(200).json({ earnings: [] });
             }
+        } catch (error) {
+            res.status(500).json({
+                title: "Error",
+                message: error.message,
+            });
+        }
+    }
+
+    async getVacationDayByCategories(req, res) {
+        try {
+            const connSQL = await connectSQL();
+            const connMySQL = await connectMySQL();
+
+            const { recordset: recordsetToDate } = await connSQL.request().query(`
+            select ETV.EMPLOYMENT_CODE, TOTAL_VACATION_DAYS, CURRENT_GENDER, ETHNICITY, SHAREHOLDER_STATUS from EMPLOYMENT_TOTAL_VACATION_DAYS_TO_DATE ETV, EMPLOYMENT E, PERSONAL P
+            where ETV.EMPLOYMENT_CODE=E.EMPLOYMENT_CODE and E.PERSONAL_ID=P.PERSONAL_ID`);
+
+            const { recordset: recordsetToPreviousYear } = await connSQL.request().query(`
+            select ETV.EMPLOYMENT_CODE, TOTAL_VACATION_DAYS, CURRENT_GENDER, ETHNICITY, SHAREHOLDER_STATUS from EMPLOYMENT_TOTAL_VACATION_DAYS_TO_PREVIOUS_YEAR ETV, EMPLOYMENT E, PERSONAL P
+            where ETV.EMPLOYMENT_CODE=E.EMPLOYMENT_CODE and E.PERSONAL_ID=P.PERSONAL_ID`);
+
+            const vacationDayToDate = await summarizedVacationDays(recordsetToDate, connMySQL);
+            const vacationDayToPreviousYear = await summarizedVacationDays(recordsetToPreviousYear, connMySQL);
+
+            connSQL.close();
+            connMySQL.end();
+            res.status(200).json({ vacationDayToDate, vacationDayToPreviousYear });
         } catch (error) {
             res.status(500).json({
                 title: "Error",
