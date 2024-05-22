@@ -80,7 +80,7 @@ class employee {
                 numberDay,
                 personalId,
                 lastName,
-                fistName,
+                firstName,
                 ssn,
                 payRate,
                 payRateID,
@@ -88,6 +88,15 @@ class employee {
                 paidToDate,
                 paidToLastYear,
             } = req.body;
+
+            // parsed varchar to int
+            const numberDayParsed = parseInt(numberDay, 10);
+            const personalIdParsed = parseInt(personalId, 18);
+            const paidToDateParsed = parseInt(paidToDate, 10);
+            const paidToLastYearParsed = parseInt(paidToLastYear, 10);
+            const payRateIDParsed = parseInt(payRateID, 10);
+            const ssnParsed = parseInt(ssn, 10);
+            const vacationDaysParsed = parseInt(vacationDays, 10);
             //employment sql server
             const conn = await connectSQL();
             const countEmployee = await conn.request().query("select count(*) as count from EMPLOYMENT");
@@ -95,7 +104,7 @@ class employee {
             const sqlString = `insert into EMPLOYMENT VALUES(${
                 count + 1
             },'${employeeCode}','${employeeStatus}',CONVERT(date, '${hireDate}', 23),'${workerCompCode}',CONVERT(date, '${terminationDate}', 23),CONVERT(date, '${rehireDate}', 23)
-            ,CONVERT(date, '${lastReviewDate}', 23),${numberDay},${personalId})`;
+            ,CONVERT(date, '${lastReviewDate}', 23),${numberDayParsed},${personalIdParsed})`;
             const result = await conn.request().query(sqlString);
             conn.close();
             //employee mysql
@@ -104,9 +113,9 @@ class employee {
             const countStaff = countEmploy[0].countEmployee;
             const mysqlString = `insert into employee values (${
                 countStaff + 1
-            },'${employeeCode}','${lastName}','${fistName}','${ssn}',  ${payRate}, ${payRateID}, ${vacationDays}, ${paidToDate}, ${paidToLastYear})`;
+            },${employeeCode},'${lastName}','${firstName}',${ssnParsed},  '${payRate}', ${payRateIDParsed}, ${vacationDaysParsed}, ${paidToDateParsed}, ${paidToLastYearParsed})`;
             const resultMysql = await connMysql.query(mysqlString);
-
+            connMysql.close();
             return res.status(200).json({
                 title: "Success",
                 message: "Employee created successfully",
@@ -125,6 +134,19 @@ class employee {
             conn.close();
             return res.status(200).json({
                 data: result.recordset,
+            });
+        } catch (error) {
+            res.status(500).json({ title: "Error", message: error.message });
+        }
+    }
+    async getEmployeePayRoll(req, res) {
+        try {
+            const connMysql = await connectMySQL();
+            const mysqlString = "select * from employee";
+            const [resultMysql] = await connMysql.query(mysqlString);
+            connMysql.close();
+            return res.status(200).json({
+                data: resultMysql,
             });
         } catch (error) {
             res.status(500).json({ title: "Error", message: error.message });
@@ -157,7 +179,7 @@ class employee {
                 rehireDate,
                 lastReviewDate,
                 numberDay,
-                personalId,
+                employeeNumber,
                 payRate,
                 payRateID,
                 vacationDays,
@@ -169,14 +191,13 @@ class employee {
             ,HIRE_DATE_FOR_WORKING='${hireDate}',WORKERS_COMP_CODE='${workerCompCode}'
             ,TERMINATION_DATE='${terminationDate}',REHIRE_DATE_FOR_WORKING='${rehireDate}'
             , LAST_REVIEW_DATE='${lastReviewDate}',NUMBER_DAYS_REQUIREMENT_OF_WORKING_PER_MONTH='${numberDay}'
-            ,PERSONAL_ID=${personalId}
             where EMPLOYMENT_CODE='${employeeCode}'`;
             const result = await conn.request().query(sqlString);
             conn.close();
             const connMysql = await connectMySQL();
             const mysqlString = `update employee set \`Pay rate\`=${payRate}, \`Pay Rates_idPay Rates\`=${payRateID},
-            \`Vacation Days\`=${vacationDays},\`Paid To Date\`=${paidToDate},\`Paid To Date\`=${paidToLastYear}
-            where \`Employee Number\`=${employee_code}`;
+            \`Vacation Days\`=${vacationDays},\`Paid To Date\`=${paidToDate},\`Paid Last Year\`=${paidToLastYear}
+            where \`Employee Number\`=${employeeNumber}`;
             const resultMysql = await connMysql.query(mysqlString);
             return res.status(200).json({
                 title: "Success",
