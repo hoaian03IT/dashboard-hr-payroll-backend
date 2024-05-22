@@ -26,12 +26,12 @@ class Alert {
     }
     async getVacationDate(req, res) {
         try {
-            const MAX_VACATION_DAYS = 20;
+            const MAX_VACATION_DAYS = 10;
             const conn = await connectMySQL();
             const [results] = await conn.query(
                 "SELECT `First Name` AS FIRSTNAME, `Last Name`AS LASTNAME,idEmployee,`Vacation Days` AS VACATIONDAYS,ABS( `Vacation Days`-" +
                     `${MAX_VACATION_DAYS}) AS OVERDAYS  FROM Employee WHERE ` +
-                    "`Vacation Days`>20"
+                    `\`Vacation Days\`>${MAX_VACATION_DAYS}`
             );
 
             conn.close();

@@ -45,7 +45,7 @@ class employee {
     async addPersonal(req, res) {
         try {
             const {
-                fistName,
+                firstName,
                 middleName,
                 lastName,
                 gender,
@@ -67,10 +67,12 @@ class employee {
             const conn = await connectSQL();
             const countPersonal = await conn.request().query("select count(*) as count from PERSONAL");
             const count = countPersonal.recordset[0].count;
-            const sqlString = `insert into PERSONAL VALUES(${count + 1},'${fistName}','${lastName}','${middleName}'
+            const shareholderStatusParsed = shareholderStatus ? 1 : 0;
+
+            const sqlString = `insert into PERSONAL VALUES(${count + 1},'${firstName}','${lastName}','${middleName}'
             ,CONVERT(date, '${birthday}', 23),'${SSN}','${driverlicense}','${address1}','${address2}'
             ,'${city}','${country}','${zip}','${gender}','${phoneNumber}','${email}','${maritalStatus}','${ethnicity}'
-            ,'${shareholderStatus}','${benefitPlanID}'); `;
+            ,${shareholderStatusParsed},${benefitPlanID}); `;
             const result = await conn.request().query(sqlString);
             conn.close();
             return res.status(200).json({
@@ -127,9 +129,9 @@ class employee {
             const countStaff = countEmploy[0].countEmployee;
             const mysqlString = `insert into employee values (${
                 countStaff + 1
-            },${employeeCode},'${lastName}','${firstName}',${ssnParsed},  '${payRate}', ${payRateIDParsed}, ${vacationDaysParsed}, ${paidToDateParsed}, ${paidToLastYearParsed})`;
+            },'${employeeCode}','${lastName}','${firstName}',${ssnParsed},  '${payRate}', ${payRateIDParsed}, ${vacationDaysParsed}, ${paidToDateParsed}, ${paidToLastYearParsed})`;
             const resultMysql = await connMysql.query(mysqlString);
-            connMysql.close();
+            connMysql.end();
             return res.status(200).json({
                 title: "Success",
                 message: "Employee created successfully",
@@ -158,7 +160,7 @@ class employee {
             const connMysql = await connectMySQL();
             const mysqlString = "select * from employee";
             const [resultMysql] = await connMysql.query(mysqlString);
-            connMysql.close();
+            connMysql.end();
             return res.status(200).json({
                 data: resultMysql,
             });
@@ -209,10 +211,11 @@ class employee {
             const result = await conn.request().query(sqlString);
             conn.close();
             const connMysql = await connectMySQL();
-            const mysqlString = `update employee set \`Pay rate\`=${payRate}, \`Pay Rates_idPay Rates\`=${payRateID},
+            const mysqlString = `update employee set \`Pay rate\`='${payRate}', \`Pay Rates_idPay Rates\`=${payRateID},
             \`Vacation Days\`=${vacationDays},\`Paid To Date\`=${paidToDate},\`Paid Last Year\`=${paidToLastYear}
-            where \`Employee Number\`=${employeeNumber}`;
+            where \`Employee Number\`='${employeeNumber}'`;
             const resultMysql = await connMysql.query(mysqlString);
+            connMysql.end();
             return res.status(200).json({
                 title: "Success",
                 message: "Employee Update successfully",
@@ -230,8 +233,9 @@ class employee {
             const result = await conn.request().query(sqlString);
             conn.close();
             const connMysql = await connectMySQL();
-            const mysqlString = `delete from employee where \`Employee Number\`=${employee_code}`;
+            const mysqlString = `delete from employee where \`Employee Number\`='${employee_code}'`;
             const resultMysql = await connMysql.query(mysqlString);
+            connMysql.end();
             return res.status(200).json({
                 title: "Success",
                 message: "Employee delete successfully",

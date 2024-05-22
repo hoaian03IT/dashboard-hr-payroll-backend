@@ -17,7 +17,7 @@ app.use(express.urlencoded({ extended: true })); // for parsing application/x-ww
 app.use(cookieParser());
 
 const corsOption = {
-    origin: "*",
+    origin: `http://localhost:${process.env.CLIENT_PORT}`,
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
     credentials: true,
     optionSuccessStatus: 200,

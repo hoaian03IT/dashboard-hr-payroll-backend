@@ -166,6 +166,7 @@ class Auth {
     async logout(req, res) {
         try {
             const refreshToken = req.cookies["refresh-token"];
+            console.log(req.cookies);
             if (!refreshToken) {
                 return res.status(401).json({
                     title: "Error",
