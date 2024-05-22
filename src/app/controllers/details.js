@@ -114,8 +114,89 @@ class Details {
 
     async fetchDetailEarningByList(req, res) {
         try {
+            let { employeeCode, shareholder, gender, typePayment } = req.query;
+
+            console.log(employeeCode, shareholder, gender, typePayment);
+
             const connSQL = await connectSQL();
             const connMySQL = await connectMySQL();
+
+            if (["0", "1"].includes(typePayment) && !employeeCode) {
+                const [resultQuery] = await connMySQL.query(
+                    `select \`Employee Number\` from \`employee pay rates\` where \`Pay Type\`=${typePayment}`
+                );
+
+                employeeCode = resultQuery.map((item) => item && item["Employee Number"]);
+            }
+
+            let queryStr = `select CURRENT_FIRST_NAME, CURRENT_LAST_NAME, SHAREHOLDER_STATUS,  CURRENT_GENDER, ETHNICITY, E.EMPLOYMENT_CODE, EMPLOYMENT_STATUS
+            from EMPLOYMENT E, PERSONAL P
+            where E.PERSONAL_ID=P.PERSONAL_ID
+            ${
+                Array.isArray(employeeCode)
+                    ? `and E.EMPLOYMENT_CODE in (${employeeCode?.map((code) => `'${code}'`)})`
+                    : employeeCode
+                    ? `and E.EMPLOYMENT_CODE='${employeeCode}'`
+                    : ""
+            }
+            ${["0", "1"].includes(shareholder) ? `and SHAREHOLDER_STATUS=${shareholder}` : ""}
+            ${["male", "female"].includes(gender) ? `and lower(CURRENT_GENDER)='${gender}'` : ""}
+            `;
+
+            const { recordset } = await connSQL.request().query(queryStr);
+
+            const response = [];
+
+            for (let record of recordset) {
+                const { recordset: recordsetToPreviousYear } = await connSQL
+                    .request()
+                    .query(
+                        `select * from EMPLOYMENT_TOTAL_WORKING_DAYS_TO_PREVIOUS_YEAR where EMPLOYMENT_CODE='${record["EMPLOYMENT_CODE"]}'`
+                    );
+
+                const { recordset: recordsetToDate } = await connSQL
+                    .request()
+                    .query(
+                        `select * from EMPLOYMENT_TOTAL_WORKING_DAYS_TO_DATE where EMPLOYMENT_CODE='${record["EMPLOYMENT_CODE"]}'`
+                    );
+
+                const [[payRateInfo]] = await connMySQL.query(
+                    `select * from \`employee pay rates\` where \`Employee Number\`='${record["EMPLOYMENT_CODE"]}'`
+                );
+
+                let AMOUNT_TO_DATE, AMOUNT_TO_PREVIOUS_YEAR;
+                let PAYMENT;
+
+                if (payRateInfo["Pay Type"] === PART_TIME_TYPE) {
+                    AMOUNT_TO_DATE = recordsetToDate[0]
+                        ? Number(payRateInfo["Pay Amount"]) *
+                          Number(HOUR_WORKING_PER_DAY) *
+                          Number(recordsetToDate[0]["TOTAL_WORKING_DAYS"])
+                        : 0;
+
+                    AMOUNT_TO_PREVIOUS_YEAR = recordsetToPreviousYear[0]
+                        ? Number(payRateInfo["Pay Amount"]) *
+                          Number(HOUR_WORKING_PER_DAY) *
+                          Number(recordsetToPreviousYear[0]["TOTAL_WORKING_DAYS"])
+                        : 0;
+
+                    PAYMENT = "Part time";
+                } else if (payRateInfo["Pay Type"] === FULL_TIME_TYPE) {
+                    AMOUNT_TO_DATE = recordsetToDate[0]
+                        ? Number(payRateInfo["Pay Amount"]) * Number(recordsetToDate[0]["TOTAL_WORKING_MONTH"])
+                        : 0;
+                    AMOUNT_TO_PREVIOUS_YEAR = recordsetToPreviousYear[0]
+                        ? Number(payRateInfo["Pay Amount"]) * Number(recordsetToPreviousYear[0]["TOTAL_WORKING_MONTH"])
+                        : 0;
+                    PAYMENT = "Full time";
+                }
+                response.push({ ...record, PAYMENT, AMOUNT_TO_DATE, AMOUNT_TO_PREVIOUS_YEAR });
+            }
+
+            connSQL.close();
+            connMySQL.end();
+
+            res.status(200).json({ list: response });
         } catch (error) {
             res.status(500).json({
                 title: "Error",
