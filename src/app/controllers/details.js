@@ -1,5 +1,12 @@
 const { connectSQL, connectMySQL } = require("../../db");
 const { ensureSQLViewExists, ensureMySQLViewExists } = require("../../utils/checkViewExist");
+const {
+    HOUR_WORKING_PER_DAY,
+    FULL_TIME_TYPE,
+    PART_TIME_TYPE,
+    SHAREHOLDER_STATUS,
+    NON_SHAREHOLDER_STATUS,
+} = require("../../constance");
 
 const processHandleRecordsEarnings = async (connectMySQL, recordset) => {
     // init result
@@ -20,26 +27,26 @@ const processHandleRecordsEarnings = async (connectMySQL, recordset) => {
     };
 
     for (let record of recordset) {
-        const [payRateInfos] = await connectMySQL.query(
-            `select  \`Employee Number\`, \`Pay Type\`, \`Value\`, \`Tax Percentage\`, \`Pay Amount\` from \`employee pay rates\`where \`Employee Number\`='${record.EMPLOYMENT_CODE}' limit 1`
+        const [[payRateInfos]] = await connectMySQL.query(
+            `select  \`Employee Number\`, \`Pay Type\`, \`Value\`, \`Tax Percentage\`, \`Pay Amount\` from \`employee pay rates\`where \`Employee Number\`='${record["EMPLOYMENT_CODE"]}' limit 1`
         );
         let amount;
         // pay rate
         // 1: part time
         // 0: full time
-        if (payRateInfos[0]["Pay Type"] === 1) {
-            const hoursPerDay = 4;
-            amount = payRateInfos[0]["Pay Amount"] * hoursPerDay * record["TOTAL_WORKING_DAYS"];
+        if (payRateInfos["Pay Type"] === PART_TIME_TYPE) {
+            amount = payRateInfos["Pay Amount"] * HOUR_WORKING_PER_DAY * record["TOTAL_WORKING_DAYS"];
             result["type-employment"]["part-time"] += amount;
-        } else if (payRateInfos[0]["Pay Type"] === 0) {
-            amount = payRateInfos[0]["Pay Amount"] * record["TOTAL_WORKING_MONTH"];
+        } else if (payRateInfos["Pay Type"] === FULL_TIME_TYPE) {
+            amount = payRateInfos["Pay Amount"] * record["TOTAL_WORKING_MONTH"];
             result["type-employment"]["full-time"] += amount;
         }
 
         // shareholder_status
         // 0: non-shareholder
         // 1: shareholder
-        if (record.SHAREHOLDER_STATUS === 0) result["shareholder-status"]["non-shareholder"] += amount;
+        if (record.SHAREHOLDER_STATUS === NON_SHAREHOLDER_STATUS)
+            result["shareholder-status"]["non-shareholder"] += amount;
         else result["shareholder-status"].shareholder += amount;
 
         // gender_status
@@ -92,6 +99,9 @@ class Details {
 
             // handle recordset
             const result = await processHandleRecordsEarnings(connMySQL, recordset);
+
+            connMySQL.end();
+            connSQL.close();
 
             res.status(200).json(result);
         } catch (error) {
