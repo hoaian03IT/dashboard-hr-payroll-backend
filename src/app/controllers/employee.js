@@ -1,6 +1,20 @@
 const { connectSQL, connectMySQL } = require("../../db");
 
 class employee {
+    async getBenefit(req, res) {
+        try {
+            const conn = await connectSQL();
+            const sqlString = "select BENEFIT_PLANS_ID from BENEFIT_PLANS";
+            const result = await conn.request().query(sqlString);
+            conn.close();
+            return res.status(200).json({
+                data: result.recordset,
+            });
+        } catch (error) {
+            console.log(error.message);
+        }
+    }
+
     async getPersonal(req, res) {
         try {
             const conn = await connectSQL();

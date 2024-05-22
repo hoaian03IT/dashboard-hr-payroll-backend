@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const employee = require("../app/controllers/employee");
 
+router.get("/benefitID", employee.getBenefit);
 router.get("/groupPersonal", employee.getPersonal);
 router.get("/listPersonal", employee.findPersonal);
 router.post("/addPersonal", employee.addPersonal);
