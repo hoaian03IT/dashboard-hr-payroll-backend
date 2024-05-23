@@ -48,7 +48,6 @@ const summarizedVacationDays = async (recordset, connMySQL) => {
             `select \`Pay Type\` from \`employee pay rates\` where \`Employee Number\`='${record["EMPLOYMENT_CODE"]}'`
         );
 
-        console.log(record);
         if (paymentInfo["Pay Type"] === PART_TIME_TYPE) {
             result["type-employment"]["part-time"] += record["TOTAL_VACATION_DAYS"];
         } else if (paymentInfo["Pay Type"] === FULL_TIME_TYPE) {
@@ -228,6 +227,28 @@ class Summary {
             connMySQL.end();
 
             res.status(200).json(results);
+        } catch (error) {
+            res.status(500).json({
+                title: "Error",
+                message: error.message,
+            });
+        }
+    }
+
+    async getBenefitPaidAverage(req, res) {
+        try {
+            const connMySQL = await connectMySQL();
+            const [[recordset]] =
+                await connMySQL.query(`select avg(\`Paid To Date\`) as \`Average Paid To Date\`, avg(\`Paid Last Year\`) as \`Average Paid Last Year\`
+                from employee
+            `);
+
+            connMySQL.end();
+
+            res.status(200).json({
+                averagePaidToDate: recordset?.["Average Paid To Date"],
+                averagePaidLastYear: recordset?.["Average Paid Last Year"],
+            });
         } catch (error) {
             res.status(500).json({
                 title: "Error",
