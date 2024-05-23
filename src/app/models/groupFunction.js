@@ -4,6 +4,7 @@ const groupFunctionSchema = new mongoose.Schema(
     {
         group_id: { type: mongoose.Types.ObjectId, required: true, ref: "Group" },
         function_id: { type: mongoose.Types.ObjectId, required: true, ref: "Function" },
+        is_active: { type: Boolean, required: true },
     },
     { id: false, timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
