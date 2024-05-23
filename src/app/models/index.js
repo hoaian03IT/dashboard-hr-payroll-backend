@@ -5,7 +5,6 @@ const moduleModel = require("./module");
 const functionModel = require("./function");
 const groupFunctionModel = require("./groupFunction");
 const groupModuleModel = require("./groupModule");
-const userFunctionModel = require("./userFunction");
 const refreshTokenModel = require("./refreshToken");
 
 module.exports = {
@@ -16,6 +15,5 @@ module.exports = {
     functionModel,
     groupFunctionModel,
     groupModuleModel,
-    userFunctionModel,
     refreshTokenModel,
 };
