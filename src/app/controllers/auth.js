@@ -2,7 +2,9 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
 const { generateRefreshToken, generateAccessToken } = require("../../utils/generateToken");
-const { userModel, refreshTokenModel } = require("../models");
+const { userModel, refreshTokenModel, userGroupModel, groupModel } = require("../models");
+
+const { ADMIN_ROLE, HR_ROLE, PR_ROLE } = require("../../constance");
 
 const saltRounds = 10;
 
@@ -25,7 +27,7 @@ function isValidPassword(password) {
      * The password must contain at least one uppercase letter.
      * The password must contain at least one lowercase letter.
      * The password must contain at least one digit.
-     * The password must contain at least one special character (e.g., !, @, #, $, %, ^, &, *).
+     * The password must contain at least one `sp`ecial character (e.g., !, @, #, $, %, ^, &, *).
      */
 
     // Define the regular expression for a valid username
@@ -41,12 +43,13 @@ class Auth {
             const {
                 username: usernamePayload = "",
                 password: passwordPayload = "",
-                fistName: fistNamePayload,
+                firstName: firstNamePayload,
                 middleName: middleNamePayload,
                 lastName: lastNamePayload,
                 gender: genderPayload,
                 phoneNumber: phoneNumberPayload,
                 email: emailPayload,
+                role: rolePayload,
             } = req.body;
 
             // check username's format
@@ -77,7 +80,7 @@ class Auth {
             const newUser = new userModel({
                 username: usernamePayload,
                 password: hashPassword,
-                first_name: fistNamePayload,
+                first_name: firstNamePayload,
                 middle_initial: middleNamePayload,
                 last_name: lastNamePayload,
                 gender: genderPayload,
@@ -87,6 +90,24 @@ class Auth {
 
             await newUser.save();
 
+            const user = await userModel.findOne({ username: usernamePayload });
+
+            if (
+                rolePayload !== undefined &&
+                rolePayload !== null &&
+                [ADMIN_ROLE, HR_ROLE, PR_ROLE].includes(Number(rolePayload))
+            ) {
+                let group;
+                if (Number(rolePayload) === ADMIN_ROLE) {
+                    group = await groupModel.findOne({ group_name: "admin" });
+                } else if (Number(rolePayload) === HR_ROLE) {
+                    group = await groupModel.findOne({ group_name: "hr" });
+                } else {
+                    group = await groupModel.findOne({ group_name: "pr" });
+                }
+                const userGroup = new userGroupModel({ user_id: user._id, group_id: group._id });
+                await userGroup.save();
+            }
             return res.status(200).json({
                 title: "Success",
                 message: "User created successfully",
@@ -100,6 +121,7 @@ class Auth {
         try {
             const { username: usernamePayload = "", password: passwordPayload = "" } = req.body;
 
+            console.log(usernamePayload, passwordPayload);
             // check username's format
             if (!isValidUsername(usernamePayload)) {
                 return res.status(403).json({
@@ -151,11 +173,11 @@ class Auth {
                 expires: new Date(Date.now() + 30 * 24 * 3600000), // 30 days
             });
 
-            const { user_id, username, first_name, middle_initial, last_name, gender, phone_number, email } = user._doc;
+            const { _id, username, first_name, middle_initial, last_name, gender, phone_number, email } = user._doc;
 
             return res.status(200).json({
                 title: "Success",
-                user: { user_id, username, first_name, middle_initial, last_name, gender, phone_number, email },
+                user: { _id, username, first_name, middle_initial, last_name, gender, phone_number, email },
                 token: accessToken,
             });
         } catch (error) {
@@ -166,7 +188,6 @@ class Auth {
     async logout(req, res) {
         try {
             const refreshToken = req.cookies["refresh-token"];
-            console.log(req.cookies);
             if (!refreshToken) {
                 return res.status(401).json({
                     title: "Error",

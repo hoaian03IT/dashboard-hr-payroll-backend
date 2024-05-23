@@ -7,12 +7,11 @@ const userSchema = new mongoose.Schema(
         first_name: { type: String, required: true },
         middle_initial: { type: String, default: "" },
         last_name: { type: String, required: true },
-        gender: { type: String, required: true },
+        gender: { type: String, required: true, enum: ["male", "female"] },
         phone_number: { type: String, required: true, unique: true },
         email: { type: String, required: true, unique: true },
     },
     {
-        id: false,
         timestamps: true,
         toJSON: { virtuals: true },
         toObject: { virtuals: true },

@@ -3,6 +3,9 @@ const FULL_TIME_TYPE = 0;
 const PART_TIME_TYPE = 1;
 const SHAREHOLDER_STATUS = 1;
 const NON_SHAREHOLDER_STATUS = 0;
+const ADMIN_ROLE = 3;
+const HR_ROLE = 0;
+const PR_ROLE = 1;
 
 module.exports = {
     HOUR_WORKING_PER_DAY,
@@ -10,4 +13,7 @@ module.exports = {
     PART_TIME_TYPE,
     SHAREHOLDER_STATUS,
     NON_SHAREHOLDER_STATUS,
+    ADMIN_ROLE,
+    HR_ROLE,
+    PR_ROLE,
 };
