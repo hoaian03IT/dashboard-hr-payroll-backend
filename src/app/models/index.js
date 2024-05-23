@@ -1,11 +1,19 @@
 const userModel = require("./user");
 const groupModel = require("./group");
 const userGroupModel = require("./userGroup");
+const moduleModel = require("./module");
+const functionModel = require("./function");
+const groupFunctionModel = require("./groupFunction");
+const groupModuleModel = require("./groupModule");
 const refreshTokenModel = require("./refreshToken");
 
 module.exports = {
     userModel,
     groupModel,
     userGroupModel,
+    moduleModel,
+    functionModel,
+    groupFunctionModel,
+    groupModuleModel,
     refreshTokenModel,
 };
