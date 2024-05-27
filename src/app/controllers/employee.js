@@ -107,7 +107,7 @@ class employee {
 
             // parsed varchar to int
             const numberDayParsed = parseInt(numberDay, 10);
-            const personalIdParsed = parseInt(personalId, 18);
+            const personalIdParsed = parseInt(personalId, 10);
             const paidToDateParsed = parseInt(paidToDate, 10);
             const paidToLastYearParsed = parseInt(paidToLastYear, 10);
             const payRateIDParsed = parseInt(payRateID, 10);
