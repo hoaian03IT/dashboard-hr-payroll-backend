@@ -116,8 +116,6 @@ class Details {
         try {
             let { employeeCode, shareholder, gender, typePayment } = req.query;
 
-            console.log(employeeCode, shareholder, gender, typePayment);
-
             const connSQL = await connectSQL();
             const connMySQL = await connectMySQL();
 
@@ -195,6 +193,124 @@ class Details {
 
             connSQL.close();
             connMySQL.end();
+
+            res.status(200).json({ list: response });
+        } catch (error) {
+            res.status(500).json({
+                title: "Error",
+                message: error.message,
+            });
+        }
+    }
+
+    async getDetailBenefitPaid(req, res) {
+        try {
+            const { "shareholder-status": shareholderStatus } = req.query;
+
+            const shareholderStatusQuery = shareholderStatus == 0 ? 0 : shareholderStatus == 1 ? 1 : "all";
+
+            const connSQL = await connectSQL();
+            const connMySQL = await connectMySQL();
+
+            const { recordset } = await connSQL.request().query(
+                `select PERSONAL_ID, CURRENT_FIRST_NAME, CURRENT_LAST_NAME, CURRENT_MIDDLE_NAME, ETHNICITY, CURRENT_GENDER ,SHAREHOLDER_STATUS  from PERSONAL 
+                    ${shareholderStatusQuery !== "all" ? `where SHAREHOLDER_STATUS=${shareholderStatusQuery}` : ""}
+                    `
+            );
+
+            let response = [];
+
+            for (let record of recordset) {
+                const { recordset } = await connSQL
+                    .request()
+                    .query(`select EMPLOYMENT_CODE from EMPLOYMENT where PERSONAL_ID='${record["PERSONAL_ID"]}'`);
+
+                const employeeCodeSet =
+                    recordset.length > 1
+                        ? `in (${recordset.map((record) => `'${record["EMPLOYMENT_CODE"]}'`)})`
+                        : `='${recordset[0]?.["EMPLOYMENT_CODE"]}'`;
+
+                const [[resultQuery]] =
+                    await connMySQL.query(`select AVG(\`Paid To Date\`) as \`Avg Paid To Date\`, AVG(\`Paid Last Year\`) as \`Avg Paid Last Year\` 
+                    from employee e, \`pay rates\` p
+                    where e.\`Pay Rates_idPay Rates\`=p.\`idPay Rates\` 
+                    and \`Employee Number\` ${employeeCodeSet}
+                    `);
+
+                response.push({ ...record, ...resultQuery });
+            }
+
+            connSQL.close();
+            connMySQL.end();
+
+            res.status(200).json({ list: response });
+        } catch (error) {
+            res.status(500).json({
+                title: "Error",
+                message: error.message,
+            });
+        }
+    }
+
+    async getDetailVacationDay(req, res) {
+        try {
+            let {
+                "employee-code": employeeCode = "",
+                gender = "",
+                "shareholder-status": shareholderStatus = "",
+                "type-payment": typePayment = "",
+            } = req.query;
+
+            const connSQL = await connectSQL();
+            const connMySQL = await connectMySQL();
+
+            console.log({ employeeCode, gender, shareholderStatus, typePayment });
+
+            if (typePayment !== "" && !employeeCode) {
+                const [resultQuery] = await connMySQL.query(
+                    `select \`Employee Number\` from \`employee pay rates\` where \`Pay Type\`=${typePayment}`
+                );
+
+                employeeCode = resultQuery.map((item) => item && item["Employee Number"]);
+            }
+
+            let queryString = `select CURRENT_FIRST_NAME,CURRENT_LAST_NAME,E.EMPLOYMENT_CODE,SHAREHOLDER_STATUS,ETHNICITY,CURRENT_GENDER,EMPLOYMENT_STATUS from PERSONAL P, EMPLOYMENT E
+            where P.PERSONAL_ID = E.PERSONAL_ID
+            ${
+                Array.isArray(employeeCode)
+                    ? `and E.EMPLOYMENT_CODE in (${employeeCode?.map((code) => `'${code}'`)})`
+                    : employeeCode
+                    ? `and E.EMPLOYMENT_CODE='${employeeCode}'`
+                    : ""
+            }
+            ${["0", "1"].includes(shareholderStatus) ? `and SHAREHOLDER_STATUS=${shareholderStatus}` : ""}
+            ${["male", "female"].includes(gender) ? `and lower(CURRENT_GENDER)='${gender}'` : ""}
+            `;
+            const { recordset } = await connSQL.request().query(queryString);
+
+            const response = [];
+            for (let record of recordset) {
+                const { recordset: lastYear } = await connSQL
+                    .request()
+                    .query(
+                        `select sum(TOTAL_VACATION_DAYS) as TOTAL_VACATION_DAYS from EMPLOYMENT_TOTAL_VACATION_DAYS_TO_PREVIOUS_YEAR where EMPLOYMENT_CODE='${record["EMPLOYMENT_CODE"]}'`
+                    );
+                const [[toDate]] = await connMySQL.query(
+                    `select sum(\`Vacation Days\`) as \`Vacation Days\`, \`Pay Type\` from  employee e, \`pay rates\` p where e.\`Pay Rates_idPay Rates\`=p.\`idPay Rates\` and \`Employee Number\`='${record["EMPLOYMENT_CODE"]}'`
+                );
+
+                response.push({
+                    ...record,
+                    VACATION_DAY_LAST_YEAR: lastYear[0]["TOTAL_VACATION_DAYS"]
+                        ? Number(lastYear[0]["TOTAL_VACATION_DAYS"])
+                        : 0,
+                    VACATION_DAY_TO_DATE: toDate["Vacation Days"] ? Number(toDate["Vacation Days"]) : 0,
+                    TYPE_PAYMENT: toDate["Pay Type"] === 0 ? "Full time" : "Part time",
+                });
+            }
+
+            connMySQL.end();
+            connSQL.close();
 
             res.status(200).json({ list: response });
         } catch (error) {
