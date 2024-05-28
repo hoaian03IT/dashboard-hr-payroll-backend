@@ -121,7 +121,6 @@ class Auth {
         try {
             const { username: usernamePayload = "", password: passwordPayload = "" } = req.body;
 
-            console.log(usernamePayload, passwordPayload);
             // check username's format
             if (!isValidUsername(usernamePayload)) {
                 return res.status(403).json({
